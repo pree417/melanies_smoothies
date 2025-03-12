@@ -9,7 +9,7 @@ st.title(":cup_with_straw: Customize Your Smoothie :cup_with_straw:")
 st.write("Choose the fruits you want in your custom smoothie")
 
 # Input for smoothie order name
-name_on_order = st.text_input("Name on Smoothie:").strip().upper()  # Normalize input
+name_on_order = st.text_input("Name on Smoothie:").strip()  # Keep user input as-is
 st.write("The name on your smoothie will be:", name_on_order)
 
 # Connect to Snowflake
@@ -29,8 +29,8 @@ if len(ingredients_list) > 5:
 
 st.write('')
 if ingredients_list:
-    # Normalize ingredients list
-    normalized_ingredients = " ".join([fruit.upper().strip() for fruit in ingredients_list])  
+    # Convert to Title Case (First letter capitalized, rest lowercase) and trim spaces
+    normalized_ingredients = " ".join([fruit.capitalize().strip() for fruit in ingredients_list])
 
     for fruit_chosen in ingredients_list:
         # Fetch search key for fruit
@@ -38,7 +38,7 @@ if ingredients_list:
 
         if search_on:
             st.subheader(f"{fruit_chosen} Nutrition Information")
-            
+
             # Fetch nutrition information safely
             try:
                 response = requests.get(f"https://my.smoothiefroot.com/api/fruit/{search_on}")
@@ -62,7 +62,7 @@ if ingredients_list:
 
         # Debugging: Check inserted data
         hash_check_query = f"""
-        SELECT ingredients, HASH(UPPER(TRIM(ingredients))), HASH(UPPER(TRIM(name_on_order))) 
+        SELECT ingredients, HASH(TRIM(ingredients)), HASH(UPPER(TRIM(ingredients))), HASH(ingredients) 
         FROM smoothies.public.orders 
         WHERE name_on_order = ?;
         """
