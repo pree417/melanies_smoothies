@@ -28,7 +28,7 @@ pd_df = my_dataframe.to_pandas()
 
 ingredients_list = st.multiselect(
     "Choose upto 5 ingredients",
-    my_dataframe, max_selections=5
+    pd_df, max_selections=5
 )
 
 if len(ingredients_list) > 5:
