@@ -6,10 +6,10 @@ import pandas as pd
 
 # Streamlit app UI
 st.title(":cup_with_straw: Customize Your Smoothie :cup_with_straw:")
-st.write("Choose your fruits you want in your custom smoothie")
+st.write("Choose the fruits you want in your custom smoothie")
 
 # Input for smoothie order name
-name_on_order = st.text_input("Name on Smoothie:")
+name_on_order = st.text_input("Name on Smoothie:").strip().upper()  # Normalize input
 st.write("The name on your smoothie will be:", name_on_order)
 
 # Connect to Snowflake
@@ -29,12 +29,14 @@ if len(ingredients_list) > 5:
 
 st.write('')
 if ingredients_list:
-    ingredients_string = " ".join(ingredients_list)  # Join fruits into a string
+    # Normalize ingredients list
+    normalized_ingredients = " ".join([fruit.upper().strip() for fruit in ingredients_list])  
 
     for fruit_chosen in ingredients_list:
-        if not pd_df[pd_df['FRUIT_NAME'] == fruit_chosen].empty:
-            search_on = pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
+        # Fetch search key for fruit
+        search_on = pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0] if not pd_df[pd_df['FRUIT_NAME'] == fruit_chosen].empty else None
 
+        if search_on:
             st.subheader(f"{fruit_chosen} Nutrition Information")
             
             # Fetch nutrition information safely
@@ -52,8 +54,17 @@ if ingredients_list:
     time_to_insert = st.button("Submit Order")
 
     if time_to_insert:
-        # Secure SQL insert query
+        # Insert order into Snowflake with normalized ingredients
         my_insert_stmt = "INSERT INTO smoothies.public.orders (ingredients, name_on_order) VALUES (?, ?)"
-        session.sql(my_insert_stmt, params=[ingredients_string.strip(), name_on_order]).collect()
+        session.sql(my_insert_stmt, params=[normalized_ingredients, name_on_order]).collect()
 
         st.success(f"Your Smoothie is ordered, {name_on_order}!", icon="✅")
+
+        # Debugging: Check inserted data
+        hash_check_query = f"""
+        SELECT ingredients, HASH(UPPER(TRIM(ingredients))), HASH(UPPER(TRIM(name_on_order))) 
+        FROM smoothies.public.orders 
+        WHERE name_on_order = ?;
+        """
+        hash_results = session.sql(hash_check_query, params=[name_on_order]).collect()
+        st.write("Debugging Hash Values:", hash_results)
