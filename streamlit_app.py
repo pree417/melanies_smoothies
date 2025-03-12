@@ -1,4 +1,6 @@
+# Import python packages
 import streamlit as st
+
 from snowflake.snowpark.functions import col
 
 
@@ -14,9 +16,9 @@ st.write(
 )
 
 cnx=st.connection("snowflake")
-session = cnx.session
+session = cnx.session()
 my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
-st.dataframe(data=my_dataframe, use_container_width=True)
+#st.dataframe(data=my_dataframe, use_container_width=True)
 
 
 ingredients_list = st.multiselect(
@@ -46,3 +48,4 @@ if ingredients_list:
         session.sql(my_insert_stmt).collect()
     
         st.success(f"Your Smoothie is ordered {name_on_order}!",icon="✅")
+    
