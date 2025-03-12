@@ -1,4 +1,3 @@
-# Import python packages
 import streamlit as st
 from snowflake.snowpark.functions import col
 import requests
@@ -13,7 +12,7 @@ name_on_order = st.text_input("Name on Smoothie:").strip()  # Preserve case
 st.write("The name on your smoothie will be:", name_on_order)
 
 # Connect to Snowflake
-cnx = st.connection("snowflake")
+cnx = st.experimental_connection("snowflake", type="snowflake")
 session = cnx.session()
 
 # Fetch fruit options
@@ -42,7 +41,7 @@ if ingredients_list:
                 response = requests.get(f"https://my.smoothiefroot.com/api/fruit/{search_on}")
                 if response.status_code == 200:
                     fruit_data = response.json()
-                    st.dataframe(data=fruit_data, use_container_width=True)
+                    st.write(fruit_data)  # Show full data or first few rows
                 else:
                     st.warning(f"Could not fetch nutrition data for {fruit_chosen}")
             except requests.exceptions.RequestException as e:
@@ -53,10 +52,12 @@ if ingredients_list:
 
     if time_to_insert:
         # Safe SQL Insertion
-        my_insert_stmt = "INSERT INTO smoothies.public.orders (ingredients, name_on_order) VALUES (?, ?)"
-        session.sql(my_insert_stmt, params=[normalized_ingredients, name_on_order]).collect()
-
-        st.success(f"Your Smoothie is ordered, {name_on_order}!", icon="✅")
+        try:
+            my_insert_stmt = "INSERT INTO smoothies.public.orders (ingredients, name_on_order) VALUES (?, ?)"
+            session.sql(my_insert_stmt, params=[normalized_ingredients, name_on_order]).collect()
+            st.success(f"Your Smoothie is ordered, {name_on_order}!", icon="✅")
+        except Exception as e:
+            st.error(f"Error placing your order: {e}")
 
         # **DEBUG: Check Hashing Values**
         hash_check_query = """
@@ -68,4 +69,6 @@ if ingredients_list:
         WHERE name_on_order = ?;
         """
         hash_results = session.sql(hash_check_query, params=[name_on_order]).collect()
-        st.write("🔍 Hash Debugging Results:", hash_results)
+        st.write("🔍 Hash Debugging Results:")
+        for row in hash_results:
+            st.write(f"Original: {row['HASH_ORIGINAL']}, Trimmed: {row['HASH_TRIMMED']}, Upper Trimmed: {row['HASH_UPPER_TRIMMED']}")
